@@ -1,0 +1,62 @@
+name: Crawl DHT using magneticod
+on:
+  workflow_dispatch:
+    inputs:
+      time-duration:
+        description: Time to run magneticod
+        required: true
+        default: 1h
+      database-url:
+        description: Magneticod database URL
+        required: true
+        default: https://github.com/AnimMouse/magneticod-actions/releases/latest/download/database.sqlite3.zst
+        
+jobs:
+  magneticod:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download magneticod
+        working-directory: ${{ runner.temp }}
+        run: |
+          aria2c -x 16 -d ./magneticod/ https://github.com/boramalper/magnetico/releases/latest/download/magneticod
+          chmod +x ./magneticod/magneticod
+          
+      - name: Install magneticod
+        uses: AnimMouse/tool-cache@v1
+        with:
+          folder_name: magneticod
+          
+      - name: Download and decompress database
+        run: wget -O - "${{ github.event.inputs.database-url }}" | zstd -d -o database.sqlite3
+        
+      - name: Get current date & time before crawl DHT
+        id: date-time-before
+        run: echo ::set-output name=date-time::$(date +'%Y-%m-%d %H:%M')
+        
+      - name: Run magneticod
+        run: timeout "${{ github.event.inputs.time-duration }}" magneticod --database sqlite3://$GITHUB_WORKSPACE/database.sqlite3 || true
+        
+      - name: Get current date & time after crawl DHT
+        id: date-time-after
+        run: |
+          echo ::set-output name=date-time::$(date +'%Y-%m-%d %H:%M')
+          echo ::set-output name=date-time-tag::$(date +'%Y-%m-%d-%H-%M')
+          
+      - name: Compress database
+        run: zstd -T0 -19 database.sqlite3
+        
+      - name: Release database
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Magneticod database ${{ steps.date-time-after.outputs.date-time }}
+          tag_name: m-${{ steps.date-time-after.outputs.date-time-tag }}
+          body: Magneticod database on ${{ steps.date-time-after.outputs.date-time }} started at ${{ steps.date-time-before.outputs.date-time }}
+          files: database.sqlite3.zst
+          
+      - name: Delete older releases
+        uses: dev-drprasad/delete-older-releases@v0.2.0
+        with:
+          keep_latest: 2
+          delete_tags: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
