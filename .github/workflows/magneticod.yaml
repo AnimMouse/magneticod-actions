@@ -46,12 +46,13 @@ jobs:
         run: zstd -T0 -19 database.sqlite3
         
       - name: Release database
-        uses: softprops/action-gh-release@v1
-        with:
-          name: Magneticod database ${{ steps.date-time-after.outputs.date-time }}
-          tag_name: m-${{ steps.date-time-after.outputs.date-time-tag }}
-          body: Magneticod database on ${{ steps.date-time-after.outputs.date-time }} started at ${{ steps.date-time-before.outputs.date-time }}
-          files: database.sqlite3.zst
+        run: >
+          gh release create "m-${{ steps.date-time-after.outputs.date-time-tag }}" "database.sqlite3.zst"
+          -n "Magneticod database on ${{ steps.date-time-after.outputs.date-time }} started at ${{ steps.date-time-before.outputs.date-time }}"
+          -t "Magneticod database ${{ steps.date-time-after.outputs.date-time }}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           
       - name: Delete older releases
         uses: dev-drprasad/delete-older-releases@v0.2.0
