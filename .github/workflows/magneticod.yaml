@@ -55,7 +55,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           
       - name: Delete older releases
-        uses: dev-drprasad/delete-older-releases@v0.3.3
+        uses: dev-drprasad/delete-older-releases@v0.3.4
         with:
           keep_latest: 2
           delete_tags: true
